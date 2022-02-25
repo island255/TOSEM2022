@@ -1,0 +1,161 @@
+FROM ubuntu:18.04
+
+# Inspired by klee's docker file
+
+# FIXME: Docker doesn't currently offer a way to
+# squash the layers from within a Dockerfile so
+# the resulting image is unnecessarily large!
+
+ENV LLVM_VERSION=10
+
+# TODO: This command is currently borrowed from klee's
+# Dockerfile, it seems to provide all the necessary that
+# we need in order to build coreutils.
+RUN apt-get update && \
+    apt-get -y --no-install-recommends install \
+        clang-${LLVM_VERSION} \
+        llvm-${LLVM_VERSION} \
+        llvm-${LLVM_VERSION}-dev \
+        llvm-${LLVM_VERSION}-runtime \
+        llvm \
+        libcap-dev \
+        git \
+        subversion \
+        cmake \
+        make \
+        libboost-program-options-dev \
+        python3 \
+        python3-dev \
+        python3-pip \
+        perl \
+        flex \
+        bison \
+        libncurses-dev \
+        zlib1g-dev \
+        patch \
+        wget \
+        unzip \
+        libedit-dev \
+        binutils && \
+    pip3 install -U lit tabulate && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 50
+
+# Extra dependencies needed by coreutils
+RUN apt-get -y --no-install-recommends install \
+    autoconf \
+    automake \
+    autopoint \
+    gettext \
+    gperf \
+    texinfo \
+    rsync \
+    xz-utils \ 
+    zip
+
+# Create ``llvm-coreutils`` user for container with password ``llvm-coreutils``.
+# and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
+RUN useradd -m llvm-coreutils && \
+    echo llvm-coreutils:llvm-coreutils | chpasswd
+USER llvm-coreutils
+WORKDIR /home/llvm-coreutils
+
+RUN mkdir O0 && mkdir O1 && mkdir O2 && mkdir O3 && mkdir Ofast && mkdir source
+
+WORKDIR /home/llvm-coreutils/source
+RUN git clone git://git.sv.gnu.org/coreutils
+WORKDIR /home/llvm-coreutils/source/coreutils
+RUN git checkout v8.29
+
+WORKDIR /home/llvm-coreutils/O0
+RUN cp -r /home/llvm-coreutils/source/coreutils /home/llvm-coreutils/O0
+WORKDIR /home/llvm-coreutils/O0/coreutils
+
+RUN export CC=clang-${LLVM_VERSION} && \
+    export CXX=clang++-${LLVM_VERSION} && \
+    export RANLIB=llvm-ranlib-${LLVM_VERSION} && \
+    export AR=llvm-ar-${LLVM_VERSION} && \
+    export CFLAGS=" -g -O0 -flto -std=gnu99 " && \
+    export LDFLAGS=" -flto -fuse-ld=gold  -Wl,-plugin-opt=save-temps " && \
+    ./bootstrap && \
+    ./configure && \
+    make
+
+WORKDIR /home/llvm-coreutils/O1
+RUN cp -r /home/llvm-coreutils/source/coreutils /home/llvm-coreutils/O1
+WORKDIR /home/llvm-coreutils/O1/coreutils
+# RUN git checkout v8.29
+
+RUN export CC=clang-${LLVM_VERSION} && \
+    export CXX=clang++-${LLVM_VERSION} && \
+    export RANLIB=llvm-ranlib-${LLVM_VERSION} && \
+    export AR=llvm-ar-${LLVM_VERSION} && \
+    export CFLAGS=" -g -O1 -flto -std=gnu99 " && \
+    export LDFLAGS=" -flto -fuse-ld=gold  -Wl,-plugin-opt=save-temps " && \
+    ./bootstrap && \
+    ./configure && \
+    make
+
+WORKDIR /home/llvm-coreutils/O2
+RUN cp -r /home/llvm-coreutils/source/coreutils /home/llvm-coreutils/O2
+WORKDIR /home/llvm-coreutils/O2/coreutils
+
+RUN export CC=clang-${LLVM_VERSION} && \
+    export CXX=clang++-${LLVM_VERSION} && \
+    export RANLIB=llvm-ranlib-${LLVM_VERSION} && \
+    export AR=llvm-ar-${LLVM_VERSION} && \
+    export CFLAGS=" -g -O2 -flto -std=gnu99 " && \
+    export LDFLAGS=" -flto -fuse-ld=gold  -Wl,-plugin-opt=save-temps " && \
+    ./bootstrap && \
+    ./configure && \
+    make
+    
+WORKDIR /home/llvm-coreutils/O3
+RUN cp -r /home/llvm-coreutils/source/coreutils /home/llvm-coreutils/O3
+WORKDIR /home/llvm-coreutils/O3/coreutils
+
+RUN export CC=clang-${LLVM_VERSION} && \
+    export CXX=clang++-${LLVM_VERSION} && \
+    export RANLIB=llvm-ranlib-${LLVM_VERSION} && \
+    export AR=llvm-ar-${LLVM_VERSION} && \
+    export CFLAGS=" -g -O3 -flto -std=gnu99 " && \
+    export LDFLAGS=" -flto -fuse-ld=gold  -Wl,-plugin-opt=save-temps " && \
+    ./bootstrap && \
+    ./configure && \
+    make
+
+WORKDIR /home/llvm-coreutils/Ofast
+RUN cp -r /home/llvm-coreutils/source/coreutils /home/llvm-coreutils/Ofast
+WORKDIR /home/llvm-coreutils/Ofast/coreutils
+
+RUN export CC=clang-${LLVM_VERSION} && \
+    export CXX=clang++-${LLVM_VERSION} && \
+    export RANLIB=llvm-ranlib-${LLVM_VERSION} && \
+    export AR=llvm-ar-${LLVM_VERSION} && \
+    export CFLAGS=" -g -Ofast -flto -std=gnu99 " && \
+    export LDFLAGS=" -flto -fuse-ld=gold  -Wl,-plugin-opt=save-temps " && \
+    ./bootstrap && \
+    ./configure && \
+    make
+
+
+WORKDIR /home/llvm-coreutils/
+
+COPY generateshfors2ir.py /home/llvm-coreutils/
+
+RUN python3 generateshfors2ir.py
+
+RUN bash generate_s2ir.sh
+
+COPY binary2ir.py /home/llvm-coreutils/
+
+COPY retdec-v4.0-ubuntu-64b.tar.xz /home/llvm-coreutils/
+
+RUN tar -xvf retdec-v4.0-ubuntu-64b.tar.xz
+
+RUN python3 binary2ir.py
+
+COPY extract_debug_dump.py /home/llvm-coreutils/
+
+RUN python3 extract_debug_dump.py
+
+USER root
