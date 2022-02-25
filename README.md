@@ -6,6 +6,9 @@ This is the repository illustrate how we construct the dataset and label the dat
 
 Folder "construction" shows some scripts to compile the binaries. "construction\Dockerfile_source2binary" is a Dockerfile for compiling coreutils v8.29 using clang-10 and O0-O3 options. Run "docker build -t image_owner/image_name -f Dockerfile_source2binary ." to build an image containing the source and binary of coreutils.
 
+
+Dataset will be open-sourced after the acceptance of the paper.
+
 ## Labeling
 
 Folder "ground_truth_building" contains the code to automatically label the above dataset. In detail, the code structure is listed as follows:
