@@ -1,10 +1,10 @@
-# Source2binary Dataset Construction
+# Dataset Construction and labeling
  
-This is the repository for the paper "One to One or One to many? What function inline brings to binary similarity analysis".
+This is the repository illustrate how we construct the dataset and label the dataset.
 
 ## Constuction
 
-Folder "construction" shows some scripts to extract the binaries. "construction\Dockerfile_source2binary" is a Dockerfile for compiling coreutils v8.29 using clang-10 and O0-O3 options. Run "docker build -t image_owner/image_name -f Dockerfile_source2binary ." to build an image containing the source and binary of coreutils.
+Folder "construction" shows some scripts to compile the binaries. "construction\Dockerfile_source2binary" is a Dockerfile for compiling coreutils v8.29 using clang-10 and O0-O3 options. Run "docker build -t image_owner/image_name -f Dockerfile_source2binary ." to build an image containing the source and binary of coreutils.
 
 ## Labeling
 
