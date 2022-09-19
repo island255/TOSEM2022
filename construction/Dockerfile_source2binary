@@ -141,22 +141,4 @@ RUN export CC=clang-${LLVM_VERSION} && \
 
 WORKDIR /home/llvm-coreutils/
 
-COPY generateshfors2ir.py /home/llvm-coreutils/
-
-RUN python3 generateshfors2ir.py
-
-RUN bash generate_s2ir.sh
-
-COPY binary2ir.py /home/llvm-coreutils/
-
-COPY retdec-v4.0-ubuntu-64b.tar.xz /home/llvm-coreutils/
-
-RUN tar -xvf retdec-v4.0-ubuntu-64b.tar.xz
-
-RUN python3 binary2ir.py
-
-COPY extract_debug_dump.py /home/llvm-coreutils/
-
-RUN python3 extract_debug_dump.py
-
 USER root
