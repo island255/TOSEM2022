@@ -222,6 +222,26 @@ def counting_address_coverage(Function_addresses, mapping_relation):
     print(len(binary_assembly_address))
     print(len(set(binary_mapping_address).intersection(set(binary_assembly_address))))
 
+    
+def remove_conflict_mapping(mapping_relation):
+    address_to_source_line_dict = {}
+    conflict_address = []
+    for mapping_line in mapping_relation:
+        source_file, source_line, address = mapping_line
+        if address not in address_to_source_line_dict:
+            address_to_source_line_dict[address] = source_file + source_line
+        else:
+            if source_file + source_line != address_to_source_line_dict[address]:
+                conflict_address.append(address)
+    new_mapping_relations = []
+    for mapping_line in mapping_relation:
+        address = mapping_line[2]
+        if address in conflict_address:
+            continue
+        else:
+            new_mapping_relations.append(mapping_line)
+    return new_mapping_relations
+    
 
 def extract_entity_mapping(project_dir, coreutils_src_path, mapping_path, file_name, source_entities):
     """
@@ -236,6 +256,7 @@ def extract_entity_mapping(project_dir, coreutils_src_path, mapping_path, file_n
 
     mapping_file_content = read_file(mapping_file)
     mapping_relation = extract_line_mapping(mapping_file_content)
+    mapping_relation = remove_conflict_mapping(mapping_relation)
 
     # counting the percentage of mapping address in assembly address
     # counting_address_coverage(Function_addresses, mapping_relation)
